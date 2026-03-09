@@ -201,9 +201,9 @@ def render_sidebar():
         - 13F延迟: 45天
         """)
         
-        # 机构选择（如果是机构持仓页面）
+        # 机构选择（如果是聪明钱持仓页面）
         selected_institution = None
-        if page == "🏛️ 机构持仓":
+        if page == "🏛️ 聪明钱持仓":
             st.divider()
             st.subheader("🏛️ 选择机构")
             institutions = get_institution_list()
