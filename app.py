@@ -717,7 +717,7 @@ def render_institutions(selected_institution):
             orientation='h',
             color='weight',
             color_continuous_scale=[(0, info['color']), (1, info['color'])],
-            title=f"前15大持仓 - {selected_quarter}",
+            title=f"前15大持仓 - {quarter}",
             labels={'weight': '权重 (%)', 'company': '公司名称'}
         )
         fig.update_layout(height=400, yaxis={'categoryorder': 'total ascending'})
