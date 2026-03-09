@@ -149,6 +149,7 @@ def check_latest_13f(cik, current_filing_date):
     """
     检查 SEC 是否有新的 13F 报告
     返回: (是否有新报告, 最新报告日期, 报告信息)
+    注意：在 Streamlit Cloud 上可能因网络限制无法访问 SEC
     """
     try:
         # SEC RSS feed 查询最新的 13F-HR 文件
@@ -176,7 +177,8 @@ def check_latest_13f(cik, current_filing_date):
         return False, current_filing_date, "无法获取"
         
     except Exception as e:
-        return False, current_filing_date, f"检查失败: {str(e)[:30]}"
+        # 检查失败时返回静默失败，使用内置数据
+        return False, current_filing_date, "使用内置数据"
 
 def fetch_live_data(symbol, cik):
     """
