@@ -1,6 +1,7 @@
 """
-ARK Invest 持仓追踪系统 - 汉化版
-ARK Invest Holdings Tracker - Chinese Version
+聪明钱持仓追踪系统
+Smart Money Holdings Tracker
+追踪全球顶级投资大师的持仓动向
 """
 
 import streamlit as st
@@ -17,8 +18,8 @@ from institutions_13f import (
 
 # 页面配置
 st.set_page_config(
-    page_title="ARK Invest 持仓追踪",
-    page_icon="📈",
+    page_title="聪明钱持仓追踪",
+    page_icon="💰",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -166,8 +167,8 @@ def fetch_stock_price(symbol):
 
 def render_header():
     """渲染头部"""
-    st.markdown('<div class="main-header">📈 ARK Invest 持仓追踪系统</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">实时追踪 Cathie Wood 的 ARK 基金持仓与交易动态</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">💰 聪明钱持仓追踪系统</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">追踪巴菲特、段永平、李路等投资大师的持仓动向</div>', unsafe_allow_html=True)
 
 def render_sidebar():
     """渲染侧边栏"""
@@ -177,13 +178,13 @@ def render_sidebar():
         
         page = st.radio(
             "选择功能",
-            ["🏠 首页", "📊 持仓分析", "💹 交易动态", "🏛️ 机构持仓", "🔎 股票查询", "📚 关于 ARK"]
+            ["🏠 首页", "📊 ARK持仓", "💹 ARK交易", "🏛️ 聪明钱持仓", "🔎 股票查询", "📚 关于系统"]
         )
         
         st.divider()
         
         # 基金选择
-        st.subheader("📌 选择基金")
+        st.subheader("📌 选择ARK基金")
         selected_fund = st.selectbox(
             "ARK 基金",
             options=list(FUNDS_INFO.keys()),
@@ -195,9 +196,9 @@ def render_sidebar():
         # 数据说明
         st.info("""
         **数据说明**
-        - 数据来源: arkfunds.io API
-        - 更新频率: 每日更新
-        - 延迟: T+1
+        - ARK数据: arkfunds.io API (每日)
+        - 13F数据: SEC EDGAR (季度)
+        - 13F延迟: 45天
         """)
         
         # 机构选择（如果是机构持仓页面）
@@ -226,22 +227,24 @@ def render_sidebar():
 def render_home():
     """渲染首页"""
     st.markdown("""
-    ## 🎯 欢迎来到 ARK Invest 持仓追踪系统
+    ## 🎯 欢迎来到聪明钱持仓追踪系统
     
-    这是一个**非官方**的 ARK Invest 数据追踪平台，帮助您：
+    这是一个**非官方**的全球顶级投资大师持仓追踪平台，帮助您：
     
-    - 📊 **实时持仓分析** - 查看各基金的最新持仓情况
-    - 💹 **交易动态追踪** - 了解最新的买入卖出操作
-    - 🔎 **股票深度查询** - 查询特定股票在 ARK 组合中的情况
+    - 📊 **ARK持仓分析** - 查看 Cathie Wood 的 ARK 基金持仓
+    - 💹 **交易动态追踪** - 了解 ARK 最新的买入卖出操作
+    - 🏛️ **聪明钱持仓** - 追踪巴菲特、段永平、李路等大师持仓
+    - 🔎 **股票深度查询** - 查询特定股票在各机构组合中的情况
     - 📈 **可视化展示** - 直观的图表展示持仓分布和趋势
     
     ### 🚀 快速开始
-    1. 在左侧选择您感兴趣的 ARK 基金
+    1. 在左侧选择您感兴趣的基金或机构
     2. 点击上方导航栏查看不同功能
     3. 探索数据，发现投资机会
     
     ### ⚠️ 免责声明
     本网站提供的数据仅供参考，不构成投资建议。投资有风险，入市需谨慎。
+    数据来源于 SEC EDGAR 13F 报告和 arkfunds.io API。
     """)
     
     # 展示所有基金卡片
@@ -514,39 +517,41 @@ def render_stock_search():
 
 def render_about():
     """渲染关于页面"""
-    st.header("📚 关于 ARK Invest")
+    st.header("📚 关于聪明钱持仓追踪系统")
     
     st.markdown("""
-    ### 🌟 ARK Invest 简介
+    ### 🌟 系统简介
     
-    **ARK Invest**（方舟投资）是一家成立于 2014 年的美国资产管理公司，由 **Cathie Wood**（凯瑟琳·伍德）创立。
+    **聪明钱持仓追踪系统**是一个追踪全球顶级投资大师持仓动向的数据平台。
     
-    #### 📌 投资理念
-    ARK Invest 专注于**颠覆性创新**领域，认为创新是未来增长的主要驱动力。他们的投资主题包括：
+    #### 📌 追踪的投资大师
     
-    - 🤖 **人工智能与自动化**
-    - 🧬 **基因技术**（基因编辑、分子诊断、干细胞治疗）
-    - 🚀 **太空探索**
-    - 💰 **金融科技**
-    - 🌐 **下一代互联网**
+    **🇺🇸 美国价值投资派**
+    - **沃伦·巴菲特** - 伯克希尔·哈撒韦，价值投资鼻祖
+    - **查理·芒格** - 每日期刊公司，巴菲特合伙人
+    - **比尔·阿克曼** - 潘兴广场资本，维权投资
     
-    #### 👩‍💼 关于 Cathie Wood
-    Cathie Wood 是 ARK Invest 的创始人兼 CEO，被誉为"女版巴菲特"。她以对科技股的前瞻性投资而闻名，
-    特别是在 Tesla、Coinbase、Roku 等公司的早期投资上取得了巨大成功。
+    **🇨🇳 中国投资大师**
+    - **段永平** - H&H投资，重仓苹果、英伟达，"中国巴菲特"
+    - **李路** - 喜马拉雅资本，芒格认可的投资人，重仓谷歌
+    - **张磊** - 高瓴资本，重仓中概股和医疗
     
-    #### 📊 ARK 的透明文化
-    ARK Invest 以其高度透明而著称：
-    - 每日公布所有交易活动
-    - 定期发布研究报告和市场评论
-    - 通过 YouTube 等平台分享投资观点
+    **📊 量化投资**
+    - **瑞·达里奥** - 桥水基金，全球最大对冲基金
     
-    #### ⚠️ 风险提示
-    ARK 基金的投资策略具有较高的波动性，主要因为：
-    - 重仓高成长科技股
-    - 集中度较高（前十大持仓占比大）
-    - 创新领域本身具有不确定性
+    #### 📈 ARK Invest
+    **Cathie Wood**（木头姐）- 专注于颠覆性创新的成长股投资者
     
-    **历史表现**：ARKK 在 2020 年取得了超过 150% 的回报，但在 2021-2022 年也经历了大幅回调。
+    #### ⚠️ 数据说明
+    - **ARK数据**：每日更新，来源于 arkfunds.io API
+    - **13F数据**：季度更新，来源于 SEC EDGAR
+    - **披露延迟**：13F报告有45天延迟，实际交易比报告早1.5-2个月
+    
+    #### 💡 使用建议
+    聪明钱的持仓可以作为投资参考，但请注意：
+    - 不要盲从，要有自己的判断
+    - 考虑持仓成本和时间差
+    - 了解每位投资大师的投资风格和策略
     """)
     
     # 外部链接
@@ -779,18 +784,18 @@ def main():
         render_holdings(selected_fund)
     elif page == "💹 交易动态":
         render_trades(selected_fund)
-    elif page == "🏛️ 机构持仓":
+    elif page == "🏛️ 聪明钱持仓":
         render_institutions(selected_institution)
     elif page == "🔎 股票查询":
         render_stock_search()
-    elif page == "📚 关于 ARK":
+    elif page == "📚 关于系统":
         render_about()
     
     # 页脚
     st.divider()
     st.markdown("""
     <div style="text-align: center; color: #666; padding: 20px;">
-        <p>📈 ARK Invest 持仓追踪系统 | 数据来源于 arkfunds.io API</p>
+        <p>💰 聪明钱持仓追踪系统 | 数据来源于 SEC EDGAR & arkfunds.io</p>
         <p style="font-size: 0.8rem;">⚠️ 免责声明：本网站仅供学习研究使用，不构成投资建议</p>
     </div>
     """, unsafe_allow_html=True)
