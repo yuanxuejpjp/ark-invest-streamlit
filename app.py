@@ -10,6 +10,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import json
+from institutions_13f import (
+    get_institution_list, get_institution_data_live, get_available_quarters,
+    INSTITUTIONS, BUILTIN_HOLDINGS
+)
 
 # 页面配置
 st.set_page_config(
@@ -173,7 +177,7 @@ def render_sidebar():
         
         page = st.radio(
             "选择功能",
-            ["🏠 首页", "📊 持仓分析", "💹 交易动态", "🔎 股票查询", "📚 关于 ARK"]
+            ["🏠 首页", "📊 持仓分析", "💹 交易动态", "🏛️ 机构持仓", "🔎 股票查询", "📚 关于 ARK"]
         )
         
         st.divider()
@@ -196,7 +200,28 @@ def render_sidebar():
         - 延迟: T+1
         """)
         
-        return page, selected_fund
+        # 机构选择（如果是机构持仓页面）
+        selected_institution = None
+        if page == "🏛️ 机构持仓":
+            st.divider()
+            st.subheader("🏛️ 选择机构")
+            institutions = get_institution_list()
+            selected_institution = st.selectbox(
+                "顶级投资机构",
+                options=list(institutions.keys()),
+                format_func=lambda x: f"{x} - {institutions[x]['name']}"
+            )
+            
+            if selected_institution:
+                info = institutions[selected_institution]
+                st.markdown(f"""
+                <div style="background-color: #1E1E2E; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                    <p style="margin: 0; font-size: 0.85rem; color: #888;">基金经理</p>
+                    <p style="margin: 0; font-weight: bold; color: {info['color']};">{info['manager']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        return page, selected_fund, selected_institution
 
 def render_home():
     """渲染首页"""
@@ -535,10 +560,218 @@ def render_about():
     with col3:
         st.link_button("💻 GitHub", "https://github.com/frefrik/ark-invest-api")
 
+def render_institutions(selected_institution):
+    """渲染机构持仓页面 - 13F 季度报告
+    打开页面时实时检查 SEC 是否有新数据
+    """
+    
+    institutions = get_institution_list()
+    info = institutions[selected_institution]
+    
+    # ========== 实时数据检查 ==========
+    with st.spinner(f"🔍 正在检查 {info['name']} 的最新 13F 报告..."):
+        data, quarter, status_msg = get_institution_data_live(selected_institution)
+    
+    if not data:
+        st.error("❌ 无法获取数据")
+        return
+    
+    # 显示数据状态
+    col_status1, col_status2, col_btn = st.columns([2, 2, 1])
+    
+    with col_status1:
+        # 根据状态显示不同颜色
+        if "已是最新" in status_msg or "历史数据" in status_msg:
+            st.success(f"✅ {status_msg}")
+        elif "有新报告" in status_msg:
+            st.warning(f"⚠️ {status_msg}")
+        else:
+            st.info(f"ℹ️ {status_msg}")
+    
+    with col_status2:
+        st.caption(f"📅 当前数据季度: {data.get('quarter', 'N/A')} | 报告日期: {data.get('filing_date', 'N/A')}")
+    
+    with col_btn:
+        if st.button("🔄 重新检查", type="secondary", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+    
+    # 头部
+    st.markdown(f"""
+    <div style="text-align: center; margin-bottom: 2rem; margin-top: 1rem;">
+        <h1 style="color: {info['color']}; margin-bottom: 0.5rem;">🏛️ {info['name']}</h1>
+        <p style="color: #888; font-size: 1.1rem;">{info['name_en']} | 基金经理: {info['manager']}</p>
+        <p style="color: #666; font-size: 0.9rem; max-width: 600px; margin: 0 auto;">{info['description']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 关键指标卡片
+    st.subheader("📊 关键指标")
+    cols = st.columns(4)
+    
+    with cols[0]:
+        st.metric("💰 现金比例", f"{info['cash_ratio']}%", 
+                 delta="极高" if info['cash_ratio'] > 30 else "正常" if info['cash_ratio'] > 10 else "低")
+    with cols[1]:
+        st.metric("📈 管理规模", f"${info['aum']}B")
+    with cols[2]:
+        top10 = data.get('top10_weight', 0)
+        st.metric("🎯 前10集中度", f"{top10}%", 
+                 delta="高度集中" if top10 > 70 else "适中" if top10 > 40 else "分散")
+    with cols[3]:
+        st.metric("📅 报告日期", data.get('filing_date', 'N/A'))
+    
+    st.divider()
+    
+    # 现金 vs 股票饼图
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.subheader("💵 资产配置")
+        cash_ratio = info['cash_ratio']
+        stock_ratio = 100 - cash_ratio
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=['股票持仓', '现金储备'],
+            values=[stock_ratio, cash_ratio],
+            hole=0.4,
+            marker_colors=[info['color'], '#4B5563'],
+            textinfo='label+percent',
+            textfont_size=14
+        )])
+        fig.update_layout(
+            showlegend=False,
+            height=350,
+            margin=dict(t=0, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.subheader("📋 本季度调仓概况")
+        changes = data.get('changes_summary', {})
+        
+        if changes:
+            change_df = pd.DataFrame([
+                {'操作': k, '数量': v} 
+                for k, v in changes.items()
+            ])
+            
+            colors = {'新建仓': '#00C853', '增持': '#64DD17', '持平': '#9E9E9E', 
+                     '减持': '#FF9800', '清仓': '#FF1744'}
+            
+            fig = px.bar(change_df, x='操作', y='数量', color='操作',
+                        color_discrete_map=colors,
+                        title=f"{quarter} 调仓统计")
+            fig.update_layout(height=300, showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("暂无调仓数据")
+    
+    st.divider()
+    
+    # 持仓列表
+    st.subheader(f"📋 {quarter} 持仓详情")
+    
+    holdings = data.get('holdings', [])
+    if holdings:
+        df = pd.DataFrame(holdings)
+        
+        # 格式化显示
+        display_df = df.copy()
+        display_df['value'] = display_df['value'].apply(lambda x: f"${x/1e9:.2f}B" if x >= 1e9 else f"${x/1e6:.0f}M")
+        display_df['weight'] = display_df['weight'].apply(lambda x: f"{x:.1f}%")
+        display_df['shares'] = display_df['shares'].apply(lambda x: f"{x/1e6:.2f}M" if x >= 1e6 else f"{x/1e3:.0f}K")
+        
+        # 变化颜色标记
+        def color_change(val):
+            if isinstance(val, str):
+                if '增持' in val or '新建仓' in val:
+                    return 'color: #00C853'
+                elif '减持' in val or '清仓' in val:
+                    return 'color: #FF1744'
+            return ''
+        
+        display_df = display_df.rename(columns={
+            'ticker': '代码',
+            'company': '公司名称',
+            'shares': '持股数',
+            'value': '市值',
+            'weight': '权重',
+            'change': '变化'
+        })
+        
+        st.dataframe(
+            display_df[['代码', '公司名称', '持股数', '市值', '权重', '变化']].style.map(color_change, subset=['变化']),
+            use_container_width=True,
+            hide_index=True,
+            height=400
+        )
+        
+        # 持仓权重图
+        st.subheader("📈 持仓权重分布")
+        
+        fig = px.bar(
+            df.head(15),
+            x='weight',
+            y='company',
+            orientation='h',
+            color='weight',
+            color_continuous_scale=[(0, info['color']), (1, info['color'])],
+            title=f"前15大持仓 - {selected_quarter}",
+            labels={'weight': '权重 (%)', 'company': '公司名称'}
+        )
+        fig.update_layout(height=400, yaxis={'categoryorder': 'total ascending'})
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # 机构对比
+    st.divider()
+    st.subheader("🏛️ 顶级机构现金储备对比")
+    
+    comparison_data = []
+    for code, inst in institutions.items():
+        comparison_data.append({
+            '机构': inst['name'],
+            '现金比例': inst['cash_ratio'],
+            '基金经理': inst['manager'],
+            '颜色': inst['color']
+        })
+    
+    comp_df = pd.DataFrame(comparison_data).sort_values('现金比例', ascending=True)
+    
+    fig = px.bar(
+        comp_df,
+        x='现金比例',
+        y='机构',
+        orientation='h',
+        color='基金经理',
+        title="各机构现金储备比例（%）",
+        labels={'现金比例': '现金比例 (%)', '机构': ''}
+    )
+    fig.update_layout(height=350)
+    fig.add_vline(x=30, line_dash="dash", line_color="red", annotation_text="高现金警戒线")
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # 说明
+    st.info("""
+    **📌 关于 13F 报告说明**
+    - 13F 报告是美国 SEC 要求机构每季度披露的投资持仓报告
+    - 披露截止日期：季度结束后 45 天内
+    - 数据延迟：比实际交易晚 1.5-2 个月
+    - 只披露多头持仓，不包括空头和衍生品
+    - 现金比例为估算值，来自各机构财报
+    """)
+
 # 主函数
 def main():
     render_header()
-    page, selected_fund = render_sidebar()
+    result = render_sidebar()
+    
+    # 处理返回值（可能是2个或3个）
+    if len(result) == 3:
+        page, selected_fund, selected_institution = result
+    else:
+        page, selected_fund = result
+        selected_institution = None
     
     if page == "🏠 首页":
         render_home()
@@ -546,6 +779,8 @@ def main():
         render_holdings(selected_fund)
     elif page == "💹 交易动态":
         render_trades(selected_fund)
+    elif page == "🏛️ 机构持仓":
+        render_institutions(selected_institution)
     elif page == "🔎 股票查询":
         render_stock_search()
     elif page == "📚 关于 ARK":
